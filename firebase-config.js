@@ -1,3 +1,4 @@
+window.DOMPETKU_FIREBASE_CONFIG = {
 const firebaseConfig = {
   apiKey: "AIzaSyDcZFeRcUIktnGqIVITYqtkgSNJ8f8iSuI",
   authDomain: "dompetku-19634.firebaseapp.com",

@@ -1,0 +1,17 @@
+{
+  "id": "./",
+  "name": "Dompetku - Keuangan Pribadi",
+  "short_name": "Dompetku",
+  "description": "Aplikasi pengelola keuangan pribadi, tagihan bulanan, target, laporan, dan tabungan emas.",
+  "lang": "id-ID",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0b100e",
+  "theme_color": "#0b100e",
+  "icons": [
+    {"src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+    {"src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ]
+}

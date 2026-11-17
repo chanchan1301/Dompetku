@@ -2,8 +2,8 @@
 // File ini boleh di-commit ke repository untuk konfigurasi Firebase web.
 // Jangan pernah menaruh service-account private key atau kredensial server di sini.
 window.DOMPETKU_FIREBASE_CONFIG = {
-  apiKey: "ISI_API_KEY",
-  authDomain: "ISI_PROJECT_ID.firebaseapp.com",
-  projectId: "ISI_PROJECT_ID",
-  appId: "ISI_APP_ID"
+  apiKey: "131144306591",
+  authDomain: "dompetku-19634.firebaseapp.com",
+  projectId: "dompetku-19634",
+  appId: "project-131144306591"
 };

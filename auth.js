@@ -40,7 +40,7 @@
     const map={
       'auth/invalid-email':'Format email tidak valid.','auth/user-disabled':'Akun ini dinonaktifkan.',
       'auth/user-not-found':'Akun tidak ditemukan. Silakan daftar terlebih dahulu.',
-      'auth/wrong-password':'Kata sandi salah.','auth/invalid-credential':'Email atau kata sandi salah.',
+      'auth/wrong-password':'Password saat ini tidak cocok. Masukkan password yang kamu gunakan untuk login.','auth/invalid-credential':'Password saat ini tidak cocok. Pastikan yang dimasukkan adalah password akun yang sedang login.',
       'auth/email-already-in-use':'Email sudah terdaftar. Silakan masuk.',
       'auth/weak-password':'Kata sandi terlalu lemah. Gunakan minimal 6 karakter.',
       'auth/too-many-requests':'Terlalu banyak percobaan. Coba lagi beberapa saat.',
@@ -83,6 +83,20 @@
   const passwordBackdrop=$('passwordModalBackdrop');
   $('changePasswordBtn').addEventListener('click',()=>{
     $('changePasswordForm').reset(); $('passwordChangeMessage').textContent=''; passwordBackdrop.classList.add('open');
+  });
+  $('sendPasswordResetBtn').addEventListener('click',async()=>{
+    const user=auth.currentUser;
+    const email=(user&&user.email)||$('authEmail').value.trim();
+    const message=$('passwordChangeMessage');
+    message.style.color='#ff938b';
+    if(!email){message.textContent='Email akun tidak ditemukan. Silakan keluar lalu masuk kembali.';return;}
+    const btn=$('sendPasswordResetBtn'); btn.disabled=true; btn.textContent='Mengirim tautan…';
+    try{
+      await auth.sendPasswordResetEmail(email);
+      message.style.color='#8ce36b';
+      message.textContent='Tautan reset password dikirim ke '+email+'. Periksa Kotak Masuk dan Spam.';
+    }catch(err){message.style.color='#ff938b';message.textContent=friendlyError(err);}
+    finally{btn.disabled=false;btn.textContent='Kirim ulang tautan reset ke email';}
   });
   $('closePasswordModal').addEventListener('click',()=>passwordBackdrop.classList.remove('open'));
   passwordBackdrop.addEventListener('click',e=>{if(e.target===passwordBackdrop)passwordBackdrop.classList.remove('open');});

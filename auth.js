@@ -48,7 +48,10 @@
       'auth/weak-password':'Kata sandi terlalu lemah. Gunakan minimal 6 karakter.',
       'auth/too-many-requests':'Terlalu banyak percobaan. Coba lagi beberapa saat.',
       'auth/network-request-failed':'Koneksi internet bermasalah. Periksa jaringanmu.',
-      'auth/requires-recent-login':'Demi keamanan, silakan keluar lalu masuk kembali sebelum mengganti password.'
+      'auth/requires-recent-login':'Demi keamanan, silakan keluar lalu masuk kembali sebelum mengganti password.',
+      'auth/operation-not-allowed':'Metode Email/Password belum diaktifkan di Firebase Authentication.',
+      'auth/invalid-api-key':'API Key Firebase tidak valid. Periksa firebase-config.js.',
+      'auth/app-not-authorized':'Domain aplikasi belum diizinkan di Firebase Authentication.'
     };
     return map[code] || ('Tidak dapat memproses akun ('+code+'). Periksa pengaturan Firebase dan koneksi internet.');
   }
@@ -59,31 +62,24 @@
   }
   try{ if(!firebase.apps.length) firebase.initializeApp(cfg); auth=firebase.auth(); }
   catch(e){ showError('Konfigurasi Firebase tidak valid. Periksa firebase-config.js.'); $('authSubmit').disabled=true; return; }
-  // Setiap pembukaan aplikasi wajib login ulang; sesi Firebase tidak dipulihkan.
-  (async()=>{
-    try{
-      await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
-      if(auth.currentUser) await auth.signOut();
-      auth.onAuthStateChanged(user=>{
-        if(user && sessionStorage.getItem(loginFlowKey)==='1'){
-          activate(user);
-          if(localStorage.getItem('dompetku_active_uid')===user.uid && !sessionStorage.getItem('dompetku_uid_reload')) sessionStorage.removeItem(loginFlowKey);
-        }else{
-          if(user) auth.signOut().catch(e=>console.error('Gagal membersihkan sesi lama:',e));
-          localStorage.removeItem('dompetku_active_uid');
-          sessionStorage.removeItem('dompetku_uid_reload');
-          // Jangan hapus loginFlowKey saat callback awal Firebase mengirim null.
-          // Penanda ini diperlukan sampai proses sign-in berhasil dan dashboard aktif.
-          app.style.display='none';
-          screen.style.display='grid';
-        }
-      },e=>{console.error('Firebase auth state:',e);showError(friendlyError(e));});
-    }catch(e){
-      console.error('Gagal menyiapkan sesi login:',e);
-      showError('Tidak dapat menyiapkan login. Periksa koneksi dan konfigurasi Firebase.');
+  // Pastikan Firebase selesai mengatur SESSION sebelum observer dan form login dipasang.
+  // Tanpa menunggu Promise ini, login dapat beradu dengan pemulihan sesi awal.
+  auth.setPersistence(firebase.auth.Auth.Persistence.SESSION).then(()=>{
+  auth.onAuthStateChanged(async user=>{
+    if(user && sessionStorage.getItem(loginFlowKey) === '1'){
+      activate(user);
+      // Clear only after activate() has had a chance to perform its account-namespace reload.
+      if(localStorage.getItem('dompetku_active_uid') === user.uid && !sessionStorage.getItem('dompetku_uid_reload')) sessionStorage.removeItem(loginFlowKey);
+    }
+    else if(user){
+      // Discard a Firebase session restored from an earlier app opening.
+      try { await auth.signOut(); } catch(e) { console.error('Could not clear previous session:', e); }
+    }
+    else {
+      localStorage.removeItem('dompetku_active_uid'); sessionStorage.removeItem('dompetku_uid_reload');
       app.style.display='none'; screen.style.display='grid';
     }
-  })();
+  }, e=>{ console.error('Firebase auth state:',e); showError(friendlyError(e)); });
   $('authForm').addEventListener('submit',async e=>{
     e.preventDefault(); showError();
     const email=$('authEmail').value.trim(), password=$('authPassword').value, confirm=$('authConfirm').value;
@@ -97,8 +93,7 @@
     }catch(err){ sessionStorage.removeItem(loginFlowKey); showError(friendlyError(err)); }
     finally{ $('authSubmit').disabled=false; $('authSubmit').textContent=mode==='login'?'Masuk':'Buat akun'; }
   });
-  const logoutButton=$('logoutBtn');
-  logoutButton?.addEventListener('click',async()=>{
+  $('logoutBtn').addEventListener('click',async()=>{
     if(!confirm('Keluar dari akun Dompetku?')) return;
     try{ sessionStorage.removeItem(loginFlowKey); await auth.signOut(); }catch(e){ alert('Gagal keluar. '+friendlyError(e)); }
   });
@@ -141,5 +136,11 @@
       setTimeout(()=>passwordBackdrop.classList.remove('open'),1100);
     }catch(err){message.style.color='#ff938b';message.textContent=friendlyError(err);}
     finally{button.disabled=false;button.textContent='Simpan password baru';}
+  });
+  }).catch(e=>{
+    console.error('Firebase persistence initialization failed:',e);
+    showError('Gagal menyiapkan sesi login. Periksa koneksi internet dan muat ulang aplikasi.');
+    $('authSubmit').disabled=false;
+    $('authSubmit').textContent='Coba lagi';
   });
 })();

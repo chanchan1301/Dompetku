@@ -4,6 +4,9 @@
   const app = document.querySelector('.app');
   let mode = 'login';
   let auth = null;
+  // A user is accepted only after an explicit login during this page load.
+  // This also allows the one reload needed to switch the local finance-data namespace.
+  const loginFlowKey = 'dompetku_explicit_login_flow';
   const cfg = window.DOMPETKU_FIREBASE_CONFIG || {};
   const configured = !!(cfg.apiKey && !String(cfg.apiKey).startsWith('ISI_') && cfg.authDomain && !String(cfg.authDomain).startsWith('ISI_') && cfg.projectId && !String(cfg.projectId).startsWith('ISI_') && cfg.appId && !String(cfg.appId).startsWith('ISI_'));
   function showError(message){ $('authError').textContent = message || ''; }
@@ -56,29 +59,47 @@
   }
   try{ if(!firebase.apps.length) firebase.initializeApp(cfg); auth=firebase.auth(); }
   catch(e){ showError('Konfigurasi Firebase tidak valid. Periksa firebase-config.js.'); $('authSubmit').disabled=true; return; }
-  auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(e=>console.warn('Persistence:',e));
-  auth.onAuthStateChanged(user=>{
-    if(user){ activate(user); }
-    else {
-      localStorage.removeItem('dompetku_active_uid'); sessionStorage.removeItem('dompetku_uid_reload');
+  // Setiap pembukaan aplikasi wajib login ulang; sesi Firebase tidak dipulihkan.
+  (async()=>{
+    try{
+      await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
+      if(auth.currentUser) await auth.signOut();
+      auth.onAuthStateChanged(user=>{
+        if(user && sessionStorage.getItem(loginFlowKey)==='1'){
+          activate(user);
+          if(localStorage.getItem('dompetku_active_uid')===user.uid && !sessionStorage.getItem('dompetku_uid_reload')) sessionStorage.removeItem(loginFlowKey);
+        }else{
+          if(user) auth.signOut().catch(e=>console.error('Gagal membersihkan sesi lama:',e));
+          localStorage.removeItem('dompetku_active_uid');
+          sessionStorage.removeItem('dompetku_uid_reload');
+          sessionStorage.removeItem(loginFlowKey);
+          app.style.display='none';
+          screen.style.display='grid';
+        }
+      },e=>{console.error('Firebase auth state:',e);showError(friendlyError(e));});
+    }catch(e){
+      console.error('Gagal menyiapkan sesi login:',e);
+      showError('Tidak dapat menyiapkan login. Periksa koneksi dan konfigurasi Firebase.');
       app.style.display='none'; screen.style.display='grid';
     }
-  }, e=>{ console.error('Firebase auth state:',e); showError(friendlyError(e)); });
+  })();
   $('authForm').addEventListener('submit',async e=>{
     e.preventDefault(); showError();
     const email=$('authEmail').value.trim(), password=$('authPassword').value, confirm=$('authConfirm').value;
     if(mode==='register' && password!==confirm){ showError('Konfirmasi kata sandi tidak sama.'); return; }
     $('authSubmit').disabled=true; $('authSubmit').textContent='Memproses…';
     try{
+      sessionStorage.setItem(loginFlowKey,'1');
       if(mode==='register') await auth.createUserWithEmailAndPassword(email,password);
       else await auth.signInWithEmailAndPassword(email,password);
       // onAuthStateChanged handles the transition and account data namespace.
-    }catch(err){ showError(friendlyError(err)); }
+    }catch(err){ sessionStorage.removeItem(loginFlowKey); showError(friendlyError(err)); }
     finally{ $('authSubmit').disabled=false; $('authSubmit').textContent=mode==='login'?'Masuk':'Buat akun'; }
   });
-  $('logoutBtn').addEventListener('click',async()=>{
+  const logoutButton=$('logoutBtn');
+  logoutButton?.addEventListener('click',async()=>{
     if(!confirm('Keluar dari akun Dompetku?')) return;
-    try{ await auth.signOut(); }catch(e){ alert('Gagal keluar. '+friendlyError(e)); }
+    try{ sessionStorage.removeItem(loginFlowKey); await auth.signOut(); }catch(e){ alert('Gagal keluar. '+friendlyError(e)); }
   });
   const passwordBackdrop=$('passwordModalBackdrop');
   $('changePasswordBtn').addEventListener('click',()=>{

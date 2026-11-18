@@ -72,7 +72,8 @@
           if(user) auth.signOut().catch(e=>console.error('Gagal membersihkan sesi lama:',e));
           localStorage.removeItem('dompetku_active_uid');
           sessionStorage.removeItem('dompetku_uid_reload');
-          sessionStorage.removeItem(loginFlowKey);
+          // Jangan hapus loginFlowKey saat callback awal Firebase mengirim null.
+          // Penanda ini diperlukan sampai proses sign-in berhasil dan dashboard aktif.
           app.style.display='none';
           screen.style.display='grid';
         }

@@ -58,7 +58,7 @@ main{padding:28px clamp(16px,3vw,40px) 60px;max-width:1500px;width:100%;margin:a
  <div class="side-bottom"><div class="leaf">✦ ♣ ✦</div><strong>Langkah kecil, masa depan besar.</strong><p>Atur uang hari ini, wujudkan impianmu esok hari.</p></div>
 </aside>
 <main>
- <header class="topbar"><div style="display:flex;gap:12px;align-items:flex-start"><button class="icon-btn mobile-menu" id="menuBtn">☰</button><div><div class="eyebrow">Ruang finansialmu</div><h1 id="pageHeading">Halo, Chaan! 👋</h1></div></div><div class="top-actions"><div class="date-pill" id="todayLabel">◷ Memuat waktu…</div><button class="primary" id="addTxTop">＋ Transaksi</button></div></header>
+ <header class="topbar"><div style="display:flex;gap:12px;align-items:flex-start"><button class="icon-btn mobile-menu" id="menuBtn">☰</button><div><div class="eyebrow">Ruang finansialmu</div><h1 id="pageHeading">Halo, Chaan! 👋</h1></div></div><div class="top-actions"><div class="date-pill" id="todayLabel">◷ Memuat waktu…</div><button class="secondary" id="connectTelegramBtn" type="button">✈ Hubungkan Telegram</button><button class="primary" id="addTxTop">＋ Transaksi</button></div></header>
  <section class="section active" id="dashboard">
   <div class="hero"><div class="hero-content"><h2 id="balanceHeading">Total saldo saat ini</h2><p class="balance" id="totalBalance">Rp 0</p><small id="balanceNote" style="display:block;color:#b9cdbd;font-size:11px;margin-top:-8px;margin-bottom:14px">Saldo bersih dari seluruh transaksi</small><div class="hero-meta"><div class="meta-item">Pemasukan bulan ini<strong class="up" id="heroIncome">Rp 0</strong></div><div class="meta-item">Pengeluaran bulan ini<strong class="down" id="heroExpense">Rp 0</strong></div><div class="meta-item">Rasio menabung<strong class="up" id="saveRate">0%</strong></div></div><div class="hero-actions"><button class="primary" id="addTxHero">＋ Catat transaksi</button><button class="secondary" data-goto="gold">✧ Tabungan emas</button></div></div></div>
   <div class="grid stats">
@@ -242,6 +242,19 @@ $('#refreshGoldBtn').onclick=()=>refreshLiveGold(false);
 window.addEventListener('online',()=>{refreshLiveGold(true);toast('Internet tersambung')});
 window.addEventListener('offline',()=>{$('#goldLiveStatus').textContent='Offline — memakai harga emas terakhir yang tersimpan.'});
 render();
+// Endpoint internal untuk menerima transaksi yang dikonfirmasi dari bot Telegram.
+window.dompetkuApplyTelegramTransaction = function(tx){
+ if(!tx || !tx.id || !['income','expense'].includes(tx.type) || !(Number(tx.amount)>0)) return false;
+ if(data.transactions.some(item=>String(item.id)===String(tx.id))) return true;
+ data.transactions.unshift({
+  id:String(tx.id), type:tx.type, date:String(tx.date||todayISO()),
+  title:String(tx.title||'Transaksi Telegram'), category:String(tx.category||'Lainnya'),
+  amount:Math.round(Number(tx.amount)), note:String(tx.note||'Dicatat melalui Telegram')
+ });
+ save();
+ toast('Transaksi dari Telegram berhasil masuk');
+ return true;
+};
 // Refresh prices at startup and every five minutes; failures never erase the saved price.
 refreshLiveGold(true);setInterval(()=>refreshLiveGold(true),5*60*1000);
 </script>
@@ -250,7 +263,8 @@ refreshLiveGold(true);setInterval(()=>refreshLiveGold(true),5*60*1000);
 <script src="./firebase-config.js"></script>
 <script src="./telegram-config.js"></script>
 <script src="./telegram-notify.js"></script>
-<script src="./auth.js?v=loginfix-20261118-telegram-1"></script>
+<script src="./auth.js?v=telegram-commands-20261119"></script>
+<script src="./telegram-commands.js?v=20261119"></script>
 <script>
 // Daftarkan service worker agar Dompetku dapat dipasang dan dibuka offline.
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {

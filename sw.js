@@ -1,7 +1,10 @@
-const CACHE_NAME = 'dompetku-pwa-v6';
-const APP_FILES = ['./','./index.html','./manifest.webmanifest','./firebase-config.js','./auth.js','./icons/icon-192.png','./icons/icon-512.png'];
+const CACHE_NAME = 'dompetku-shell-v1';
+const APP_SHELL = [
+  './', './index.html', './manifest.webmanifest',
+  './icons/icon-192.png', './icons/icon-512.png'
+];
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_FILES)));
+  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL)));
   self.skipWaiting();
 });
 self.addEventListener('activate', event => {
@@ -12,17 +15,11 @@ self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
-  const path = url.pathname;
-  const refreshFirst = path.endsWith('/firebase-config.js') || path.endsWith('/auth.js') || path.endsWith('/index.html') || path.endsWith('/');
-  if (refreshFirst) {
-    event.respondWith(fetch(event.request).then(response => {
-      if (response && response.ok) { const copy=response.clone(); caches.open(CACHE_NAME).then(cache=>cache.put(event.request,copy)); }
-      return response;
-    }).catch(()=>caches.match(event.request).then(cached=>cached || caches.match('./index.html'))));
-    return;
-  }
-  event.respondWith(caches.match(event.request).then(cached=>cached || fetch(event.request).then(response=>{
-    if(response && response.ok){const copy=response.clone();caches.open(CACHE_NAME).then(cache=>cache.put(event.request,copy));}
+  event.respondWith(caches.match(event.request).then(cached => cached || fetch(event.request).then(response => {
+    if (response && response.ok) {
+      const copy = response.clone();
+      caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
+    }
     return response;
-  }).catch(()=>caches.match('./index.html'))));
+  }).catch(() => caches.match('./index.html'))));
 });

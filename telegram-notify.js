@@ -2,7 +2,7 @@
   'use strict';
   function post(type, payload) {
     var endpoint = String(window.DOMPETKU_TELEGRAM_ENDPOINT || '').trim();
-    if (!endpoint || endpoint.indexOf('ISI_URL_') === 0) return Promise.resolve(false);
+    if (!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(endpoint)) return Promise.resolve(false);
     return fetch(endpoint, {
       method: 'POST',
       mode: 'no-cors',

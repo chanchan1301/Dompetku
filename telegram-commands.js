@@ -17,8 +17,11 @@
     crypto.getRandomValues(bytes);
     return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
   }
+  function validEndpoint() {
+    return /^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(endpoint);
+  }
   function post(payload) {
-    if (!endpoint) throw new Error('URL Apps Script belum diisi di telegram-config.js.');
+    if (!validEndpoint()) throw new Error('URL Apps Script belum benar di telegram-config.js. Harus berbentuk https://script.google.com/macros/s/.../exec');
     return fetch(endpoint, {
       method: 'POST', mode: 'no-cors',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -31,7 +34,7 @@
     if (button) { button.disabled = true; button.textContent = 'Membuat kode…'; }
     try {
       if (!window.firebase || !firebase.auth().currentUser) throw new Error('Silakan login ke Dompetku terlebih dahulu.');
-      if (!endpoint) throw new Error('Isi URL Web App Apps Script pada telegram-config.js terlebih dahulu.');
+      if (!validEndpoint()) throw new Error('Isi URL Web App Apps Script (berakhiran /exec) pada telegram-config.js terlebih dahulu, lalu upload ulang ke GitHub.');
       const user = firebase.auth().currentUser;
       const idToken = await user.getIdToken(true);
       const code = randomCode();
@@ -48,7 +51,7 @@
     }
   }
   function poll() {
-    if (pollInFlight || !endpoint || !window.firebase) return;
+    if (pollInFlight || !validEndpoint() || !window.firebase) return;
     const user = firebase.auth().currentUser;
     if (!user) return;
     const secret = localStorage.getItem('dompetku_tg_poll_secret_' + user.uid);
